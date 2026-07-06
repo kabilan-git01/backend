@@ -15,6 +15,13 @@ app.get('/api/test', (req, res) => {
   });
 });
 
+// Define a GET route at the root (/) to guide users
+app.get('/', (req, res) => {
+  res.json({
+    message: "Backend is running! Please visit /api/test to view the API route."
+  });
+});
+
 // Start the server and listen on the specified port
 app.listen(PORT, () => {
   // Log a message to the console indicating the server is running
