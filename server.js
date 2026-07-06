@@ -4,8 +4,8 @@ const express = require('express');
 // Initialize the Express application
 const app = express();
 
-// Define the port number the server will listen on
-const PORT = 5000;
+// Define the port number the server will listen on (use the port provided by the hosting environment, or default to 5000 locally)
+const PORT = process.env.PORT || 5000;
 
 // Define a GET route at /api/test
 app.get('/api/test', (req, res) => {
