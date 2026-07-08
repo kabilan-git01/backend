@@ -1,8 +1,13 @@
 // Import the express library
 const express = require('express');
+// Import the cors library
+const cors = require('cors');
 
 // Initialize the Express application
 const app = express();
+
+// Enable Cross-Origin Resource Sharing (CORS)
+app.use(cors());
 
 // Define the port number the server will listen on (use the port provided by the hosting environment, or default to 5000 locally)
 const PORT = process.env.PORT || 5000;
