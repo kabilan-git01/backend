@@ -73,7 +73,7 @@ app.post('/api/payment/create-order', async (req, res) => {
 });
 
 // Define a POST route to verify Razorpay signatures
-app.post('/api/payment/verify', (req, res) => {
+app.post('/api/payment/verify', async (req, res) => {
   try {
     const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
 
@@ -87,6 +87,56 @@ app.post('/api/payment/verify', (req, res) => {
       .digest('hex');
 
     if (expectedSignature === razorpay_signature) {
+      // Fetch order details from Razorpay to get the verified amount (in paise)
+      let amount;
+      try {
+        const order = await razorpay.orders.fetch(razorpay_order_id);
+        amount = order.amount;
+      } catch (orderError) {
+        console.error("Error fetching order from Razorpay:", orderError);
+        return res.status(500).json({ 
+          success: false, 
+          message: "Payment verified, but failed to retrieve order details from Razorpay", 
+          error: orderError.message 
+        });
+      }
+
+      // Save verified payment to Supabase
+      try {
+        const supabaseResponse = await fetch(`${process.env.SUPABASE_URL}/rest/v1/payments`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': process.env.SUPABASE_ANON_KEY,
+            'Authorization': `Bearer ${process.env.SUPABASE_ANON_KEY}`,
+            'Prefer': 'return=minimal'
+          },
+          body: JSON.stringify({
+            order_id: razorpay_order_id,
+            payment_id: razorpay_payment_id,
+            amount: amount,
+            status: 'success'
+          })
+        });
+
+        if (!supabaseResponse.ok) {
+          const errorText = await supabaseResponse.text();
+          console.error("Failed to save payment to Supabase:", errorText);
+          return res.status(500).json({
+            success: false,
+            message: "Payment signature verified, but failed to save record to Supabase database",
+            error: errorText
+          });
+        }
+      } catch (dbError) {
+        console.error("Database connection error:", dbError);
+        return res.status(500).json({
+          success: false,
+          message: "Payment signature verified, but failed to connect to Supabase database",
+          error: dbError.message
+        });
+      }
+
       res.json({ success: true, message: "Payment verified successfully" });
     } else {
       res.status(400).json({ success: false, message: "Invalid payment signature verification failed" });
